@@ -1,0 +1,43 @@
+---
+language: java
+sudo: false
+
+os:
+  - linux
+  - osx
+
+branches:
+  only: 
+    - master
+    - thrift
+
+cache:
+  directories:
+    - $HOME/.gradle
+    - $HOME/.jdk
+
+env:
+  global:
+    - JAVA_HOME=$HOME/.jdk/default
+    - PATH=$JAVA_HOME/bin:$PATH
+    - GRADLE_OPTS=-Xmx256m
+
+install:
+  - true
+
+addons:
+  apt:
+    packages:
+      - cmake
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update       ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install cmake; fi
+  - .travis/install-jdk.sh
+  - .travis/clean-m2-repo.sh
+  - cmake --version
+  - ./gradlew --version
+
+script:
+  - test $TRAVIS_BRANCH == "thrift" && ./thrift/build/docker/scripts/cmake.sh
+  - test $TRAVIS_BRANCH == "master" && ./gradlew --no-daemon --stacktrace build
