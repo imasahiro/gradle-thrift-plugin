@@ -38,5 +38,5 @@ before_install:
   - ./gradlew --version
 
 script:
-  - if [[ "$TRAVIS_BRANCH" == "thrift" ]]; then ./thrift/build/docker/scripts/cmake.sh   ; fi
+  - if [[ "$TRAVIS_BRANCH" == "thrift" ]]; then .travis/build-thrift.sh ; fi
   - if [[ "$TRAVIS_BRANCH" == "master" ]]; then ./gradlew --no-daemon --stacktrace build ; fi
