@@ -36,9 +36,8 @@ before_install:
 - java -version
 - "./gradlew --version"
 script:
-- if [[ "$TRAVIS_BRANCH" == "thrift" ]]; then .travis/build-thrift.sh ; fi
-- if [[ "$TRAVIS_BRANCH" == "master" ]]; then ./gradlew --no-daemon --stacktrace build
-  ; fi
+- if [[ "$TRAVIS_BRANCH" =~ ^thrift.*$ ]]; then .travis/build-thrift.sh ; fi
+- if [[ "$TRAVIS_BRANCH" == "master" ]]; then ./gradlew --no-daemon --stacktrace build; fi
 
 # Deploy thrift binary to github
 deploy:
