@@ -1,6 +1,6 @@
 #!/bin/sh
 
-NOW=`date +"%Y%m%d%I%M%S"`
+NOW=`date +"%Y%m%d%H%M%S"`
 BRANCH=thrift
 
 git checkout $BRANCH
@@ -11,3 +11,4 @@ git push origin thrift
 
 git tag -a thrift-$NOW -m "thrift snapshot $NOW"
 git push --tags origin master
+git checkout master
