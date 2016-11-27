@@ -48,5 +48,6 @@ deploy:
   skip_cleanup: true
   on:
     repo: imasahiro/gradle-thrift-plugin
-    branch: thrift
+    condition: "$TRAVIS_TAG =~ ^thrift-[0-9]*$"
+    all_branches: true
     tags: true
