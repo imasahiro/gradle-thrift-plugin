@@ -4,6 +4,8 @@ branches:
   only:
   - master
   - thrift
+  - /release-.*/    # release tag
+  - /thrift-[0-9]+/ # thrift snapshot tag
 cache:
   directories:
   - "$HOME/.gradle"
