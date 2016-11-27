@@ -1,42 +1,52 @@
----
 language: java
-sudo: false
-
+sudo: required
 branches:
-  only: 
-    - master
-    - thrift
-
+  only:
+  - master
+  - thrift
 cache:
   directories:
-    - $HOME/.gradle
-    - $HOME/.jdk
-
+  - "$HOME/.gradle"
+  - "$HOME/.jdk"
 env:
   global:
-    - GRADLE_OPTS=-Xmx256m
-
+  - GRADLE_OPTS=-Xmx256m
 matrix:
   include:
   - os: linux
-    env: JAVA_HOME=$HOME/.jdk/default PATH=$JAVA_HOME/bin:$PATH
+    dist: trusty
+    env: OS=linux JAVA_HOME=$HOME/.jdk/default PATH=$JAVA_HOME/bin:$PATH
   - os: osx
-
+    env: OS=osx
 install:
-  - true
-
+- true
 addons:
   apt:
+    sources:
+    - george-edison55-precise-backports
     packages:
-      - cmake
-
+    - cmake
+    - cmake-data
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then .travis/install-jdk.sh ; fi
-  - .travis/clean-m2-repo.sh
-  - cmake --version
-  - java -version
-  - ./gradlew --version
-
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then .travis/install-jdk.sh ; fi
+- ".travis/install-missing-library.sh"
+- cmake --version
+- java -version
+- "./gradlew --version"
 script:
-  - if [[ "$TRAVIS_BRANCH" == "thrift" ]]; then .travis/build-thrift.sh ; fi
-  - if [[ "$TRAVIS_BRANCH" == "master" ]]; then ./gradlew --no-daemon --stacktrace build ; fi
+- if [[ "$TRAVIS_BRANCH" == "thrift" ]]; then .travis/build-thrift.sh ; fi
+- if [[ "$TRAVIS_BRANCH" == "master" ]]; then ./gradlew --no-daemon --stacktrace build
+  ; fi
+
+# Deploy thrift binary to github
+deploy:
+  provider: releases
+  api_key:
+    secure: LAf2kl02Of7J8SJjyoHthQqH7TtJi6BB9851gaUHNDbrjHhSf1KzaWcrMghGPyne5Y4pyGIkDZtPhbpdchDhSKrKjG1ViHVXQH+lRBsfKc1DH0J0KiKxU35JDX6khXq0kDjvQ+HG3faRAMmDr2HBm7nmKCKPv5+8n5b/xmJsR1Y4r7Jv0UEsi+4XBjkSVQAUS23JgJcFkGgP2nmvjBVwChjVmvHoHzIZIk00CbF4SzfWUAP6mEMfCyCfxTVDP32cEJTyeRvSfuTokLu96OmlRN03m/JXC73YH5tFBxuBz2/iZWBqdhW3sp0RQo3AFE/Cm0vF5fzu0q7W1+sEcRThZzHZ4eD5iz8k3EnqvpdBK2kM4wJqU1QfGi3OfOgoskSg1WBF985dHuU0HF60mgMG2MmaGyKbW9vqOxEBPXjksKsmvfoRWnaNSI2Z9OIUVQow7bYHZmzjU6BvSSd21bxxm4lIq+GdKzU/QiqDwe+9SK6iht1v/RHfU4JcOyxIdtNmk42SvQlHBm6CcJDJp1Jq2zjw9uDQhnsPBLvawuQRYmpuHGs+fO+EkVa3MNrmNqkenYPibFPfq5eSVFemzASPURYpIE7RcR7ynmfMkR5swJpzf1SdEfEf6q5HLNVnRy0ldlO13FYzt9CIGiCLmBFYI1IGpv7nuPgx0pQRMbs4rAA=
+  file_glob: true
+  file: 'thrift/cmake_build/bin/thrift-*'
+  skip_cleanup: true
+  on:
+    repo: imasahiro/gradle-thrift-plugin
+    branch: thrift
+    tags: true
