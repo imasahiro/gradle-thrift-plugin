@@ -1,0 +1,45 @@
+shallow_clone: true
+clone_depth: 10
+
+version: '{build}'
+os:
+- Visual Studio 2015
+configuration: Release
+
+branches:
+  only:
+  - /thrift-[0-9]+/ # thrift snapshot tag
+
+platform:
+- x64
+- x86
+
+build:
+  verbosity: minimal
+
+artifacts: 
+- path: thrift\cmake-build\bin\Release\thrift-*.exe
+  name: thrift-binary
+
+install:
+- ps: if($env:build_platform -eq 'x64') {
+        $env:bin_suffix = 'x86_64';
+      } else {
+        $env:bin_suffix = 'x86_86';
+      }
+- appveyor-retry cinst -y winflexbison
+
+build_script:
+- cd thrift
+- mkdir cmake-build
+- cd cmake-build
+- cmake -G "Visual Studio 14 2015 Win64" .. -DWITH_SHARED_LIB=off
+- cmake --build . --config Release
+- move bin\Release\thrift.exe bin\Release\thrift-$(env:bin_suffix).exe
+
+deploy:
+- provider: GitHub
+  auth_token:
+    secure: cKamElNaXkYIERyBbYJ4sflFlCzvrc14CIOsT5Crct3uXmqbAUOfuuXqADJOJ6yG
+  force_update: false
+  artifact: thrift-binary
