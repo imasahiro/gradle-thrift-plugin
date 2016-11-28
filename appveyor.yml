@@ -35,7 +35,7 @@ build_script:
 - cd cmake-build
 - cmake -G "Visual Studio 14 2015 Win64" .. -DWITH_SHARED_LIB=off
 - cmake --build . --config Release
-- move bin\Release\thrift.exe bin\Release\thrift-$(env:bin_suffix).exe
+- ps: Move-Item bin\Release\thrift.exe bin\Release\thrift-$(env:bin_suffix).exe
 
 deploy:
 - provider: GitHub
