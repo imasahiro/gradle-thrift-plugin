@@ -35,7 +35,7 @@ dependencies {
 
 task downloadThriftBinaries(type: Download) {
     src(['osx-x86_64', 'linux-x86_64'].collect { rootProject.ext.thriftBinary(it) })
-    dest "$buildDir/resources/main/"
+    dest "$buildDir/main/resources/"
     onlyIfNewer true
 }
 tasks.processResources.dependsOn downloadThriftBinaries
