@@ -4,7 +4,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'de.undercouch:gradle-download-task:3.1.1'
+        classpath 'de.undercouch:gradle-download-task:3.2.0'
     }
 }
 
@@ -15,8 +15,8 @@ apply plugin: 'idea'
 apply plugin: 'eclipse'
 apply plugin: 'de.undercouch.download'
 
-ext.thriftBinary = { arch ->
-    project.property("thrift.release.url") + '/thrift-' + arch
+ext.thriftBinary = { version, arch ->
+    project.property("thrift.release.url.${version}") + '/thrift-' + arch
 }
 
 repositories {
@@ -33,9 +33,20 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
-task downloadThriftBinaries(type: Download) {
-    src(['osx-x86_64', 'linux-x86_64'].collect { rootProject.ext.thriftBinary(it) })
-    dest "$buildDir/main/resources/"
+task downloadThrift_0_9_3_Binaries(type: Download) {
+    src(['osx-x86_64', 'linux-x86_64', 'windows-x86_64.exe'].collect {
+      rootProject.ext.thriftBinary('0.9.3', it)
+    })
+    dest "$buildDir/main/resources/0.9.3/"
     onlyIfNewer true
 }
-tasks.processResources.dependsOn downloadThriftBinaries
+
+task downloadThrift_0_10_0_Binaries(type: Download) {
+    src(['osx-x86_64', 'linux-x86_64', 'windows-x86_64.exe'].collect {
+      rootProject.ext.thriftBinary('0.10.0', it)
+    })
+    dest "$buildDir/main/resources/0.10.0/"
+    onlyIfNewer true
+}
+tasks.processResources.dependsOn downloadThrift_0_9_3_Binaries
+tasks.processResources.dependsOn downloadThrift_0_10_0_Binaries
