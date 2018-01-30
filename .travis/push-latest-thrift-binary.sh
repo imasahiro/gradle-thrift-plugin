@@ -7,7 +7,7 @@ BRANCH=thrift
 git checkout $BRANCH
 git merge master -m "Merge branch 'master' into $BRANCH"
 git fetch thrift
-git subtree pull --prefix=thrift thrift 0.10.0
+git subtree pull --prefix=thrift thrift 0.11.0
 git push origin thrift
 
 git tag -a thrift-$NOW -m "thrift snapshot $NOW"
