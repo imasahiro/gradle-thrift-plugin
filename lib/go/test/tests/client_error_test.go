@@ -20,11 +20,12 @@
 package tests
 
 import (
-	"github.com/golang/mock/gomock"
 	"errors"
 	"errortest"
 	"testing"
 	"thrift"
+
+	"github.com/golang/mock/gomock"
 )
 
 // TestCase: Comprehensive call and reply workflow in the client.
@@ -397,12 +398,43 @@ func prepareClientCallReply(protocol *MockTProtocol, failAt int, failWith error)
 // Expecting TTransportError on fail.
 func TestClientReportTTransportErrors(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
-	transport := thrift.NewTMemoryBuffer()
 
 	thing := errortest.NewTestStruct()
 	thing.M = make(map[string]string)
 	thing.L = make([]string, 0)
-	thing.S = make(map[string]struct{})
+	thing.S = make([]string, 0)
+	thing.I = 3
+
+	err := thrift.NewTTransportException(thrift.TIMED_OUT, "test")
+	for i := 0; ; i++ {
+		protocol := NewMockTProtocol(mockCtrl)
+		if !prepareClientCallReply(protocol, i, err) {
+			return
+		}
+		client := errortest.NewErrorTestClient(thrift.NewTStandardClient(protocol, protocol))
+		_, retErr := client.TestStruct(defaultCtx, thing)
+		mockCtrl.Finish()
+		err2, ok := retErr.(thrift.TTransportException)
+		if !ok {
+			t.Fatal("Expected a TTrasportException")
+		}
+
+		if err2.TypeId() != thrift.TIMED_OUT {
+			t.Fatal("Expected TIMED_OUT error")
+		}
+	}
+}
+
+// TestCase: Comprehensive call and reply workflow in the client.
+// Expecting TTransportError on fail.
+// Similar to TestClientReportTTransportErrors, but using legacy client constructor.
+func TestClientReportTTransportErrorsLegacy(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	transport := thrift.NewTMemoryBuffer()
+	thing := errortest.NewTestStruct()
+	thing.M = make(map[string]string)
+	thing.L = make([]string, 0)
+	thing.S = make([]string, 0)
 	thing.I = 3
 
 	err := thrift.NewTTransportException(thrift.TIMED_OUT, "test")
@@ -412,7 +444,7 @@ func TestClientReportTTransportErrors(t *testing.T) {
 			return
 		}
 		client := errortest.NewErrorTestClientProtocol(transport, protocol, protocol)
-		_, retErr := client.TestStruct(thing)
+		_, retErr := client.TestStruct(defaultCtx, thing)
 		mockCtrl.Finish()
 		err2, ok := retErr.(thrift.TTransportException)
 		if !ok {
@@ -429,12 +461,42 @@ func TestClientReportTTransportErrors(t *testing.T) {
 // Expecting TTProtocolErrors on fail.
 func TestClientReportTProtocolErrors(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
-	transport := thrift.NewTMemoryBuffer()
 
 	thing := errortest.NewTestStruct()
 	thing.M = make(map[string]string)
 	thing.L = make([]string, 0)
-	thing.S = make(map[string]struct{})
+	thing.S = make([]string, 0)
+	thing.I = 3
+
+	err := thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, errors.New("test"))
+	for i := 0; ; i++ {
+		protocol := NewMockTProtocol(mockCtrl)
+		if !prepareClientCallReply(protocol, i, err) {
+			return
+		}
+		client := errortest.NewErrorTestClient(thrift.NewTStandardClient(protocol, protocol))
+		_, retErr := client.TestStruct(defaultCtx, thing)
+		mockCtrl.Finish()
+		err2, ok := retErr.(thrift.TProtocolException)
+		if !ok {
+			t.Fatal("Expected a TProtocolException")
+		}
+		if err2.TypeId() != thrift.INVALID_DATA {
+			t.Fatal("Expected INVALID_DATA error")
+		}
+	}
+}
+
+// TestCase: Comprehensive call and reply workflow in the client.
+// Expecting TTProtocolErrors on fail.
+// Similar to TestClientReportTProtocolErrors, but using legacy client constructor.
+func TestClientReportTProtocolErrorsLegacy(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	transport := thrift.NewTMemoryBuffer()
+	thing := errortest.NewTestStruct()
+	thing.M = make(map[string]string)
+	thing.L = make([]string, 0)
+	thing.S = make([]string, 0)
 	thing.I = 3
 
 	err := thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, errors.New("test"))
@@ -444,7 +506,7 @@ func TestClientReportTProtocolErrors(t *testing.T) {
 			return
 		}
 		client := errortest.NewErrorTestClientProtocol(transport, protocol, protocol)
-		_, retErr := client.TestStruct(thing)
+		_, retErr := client.TestStruct(defaultCtx, thing)
 		mockCtrl.Finish()
 		err2, ok := retErr.(thrift.TProtocolException)
 		if !ok {
@@ -557,15 +619,49 @@ func prepareClientCallException(protocol *MockTProtocol, failAt int, failWith er
 // TestCase: call and reply with exception workflow in the client.
 func TestClientCallException(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
-	transport := thrift.NewTMemoryBuffer()
 
 	err := thrift.NewTTransportException(thrift.TIMED_OUT, "test")
 	for i := 0; ; i++ {
 		protocol := NewMockTProtocol(mockCtrl)
 		willComplete := !prepareClientCallException(protocol, i, err)
 
+		client := errortest.NewErrorTestClient(thrift.NewTStandardClient(protocol, protocol))
+		_, retErr := client.TestString(defaultCtx, "test")
+		mockCtrl.Finish()
+
+		if !willComplete {
+			err2, ok := retErr.(thrift.TTransportException)
+			if !ok {
+				t.Fatal("Expected a TTransportException")
+			}
+			if err2.TypeId() != thrift.TIMED_OUT {
+				t.Fatal("Expected TIMED_OUT error")
+			}
+		} else {
+			err2, ok := retErr.(thrift.TApplicationException)
+			if !ok {
+				t.Fatal("Expected a TApplicationException")
+			}
+			if err2.TypeId() != thrift.PROTOCOL_ERROR {
+				t.Fatal("Expected PROTOCOL_ERROR error")
+			}
+			break
+		}
+	}
+}
+
+// TestCase: call and reply with exception workflow in the client.
+// Similar to TestClientCallException, but using legacy client constructor.
+func TestClientCallExceptionLegacy(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	transport := thrift.NewTMemoryBuffer()
+	err := thrift.NewTTransportException(thrift.TIMED_OUT, "test")
+	for i := 0; ; i++ {
+		protocol := NewMockTProtocol(mockCtrl)
+		willComplete := !prepareClientCallException(protocol, i, err)
+
 		client := errortest.NewErrorTestClientProtocol(transport, protocol, protocol)
-		_, retErr := client.TestString("test")
+		_, retErr := client.TestString(defaultCtx, "test")
 		mockCtrl.Finish()
 
 		if !willComplete {
@@ -592,6 +688,36 @@ func TestClientCallException(t *testing.T) {
 // TestCase: Mismatching sequence id has been received in the client.
 func TestClientSeqIdMismatch(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
+	protocol := NewMockTProtocol(mockCtrl)
+	gomock.InOrder(
+		protocol.EXPECT().WriteMessageBegin("testString", thrift.CALL, int32(1)),
+		protocol.EXPECT().WriteStructBegin("testString_args"),
+		protocol.EXPECT().WriteFieldBegin("s", thrift.TType(thrift.STRING), int16(1)),
+		protocol.EXPECT().WriteString("test"),
+		protocol.EXPECT().WriteFieldEnd(),
+		protocol.EXPECT().WriteFieldStop(),
+		protocol.EXPECT().WriteStructEnd(),
+		protocol.EXPECT().WriteMessageEnd(),
+		protocol.EXPECT().Flush(),
+		protocol.EXPECT().ReadMessageBegin().Return("testString", thrift.REPLY, int32(2), nil),
+	)
+
+	client := errortest.NewErrorTestClient(thrift.NewTStandardClient(protocol, protocol))
+	_, err := client.TestString(defaultCtx, "test")
+	mockCtrl.Finish()
+	appErr, ok := err.(thrift.TApplicationException)
+	if !ok {
+		t.Fatal("Expected TApplicationException")
+	}
+	if appErr.TypeId() != thrift.BAD_SEQUENCE_ID {
+		t.Fatal("Expected BAD_SEQUENCE_ID error")
+	}
+}
+
+// TestCase: Mismatching sequence id has been received in the client.
+// Similar to TestClientSeqIdMismatch, but using legacy client constructor.
+func TestClientSeqIdMismatchLegeacy(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
 	transport := thrift.NewTMemoryBuffer()
 	protocol := NewMockTProtocol(mockCtrl)
 	gomock.InOrder(
@@ -608,7 +734,7 @@ func TestClientSeqIdMismatch(t *testing.T) {
 	)
 
 	client := errortest.NewErrorTestClientProtocol(transport, protocol, protocol)
-	_, err := client.TestString("test")
+	_, err := client.TestString(defaultCtx, "test")
 	mockCtrl.Finish()
 	appErr, ok := err.(thrift.TApplicationException)
 	if !ok {
@@ -621,6 +747,36 @@ func TestClientSeqIdMismatch(t *testing.T) {
 
 // TestCase: Wrong method name has been received in the client.
 func TestClientWrongMethodName(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	protocol := NewMockTProtocol(mockCtrl)
+	gomock.InOrder(
+		protocol.EXPECT().WriteMessageBegin("testString", thrift.CALL, int32(1)),
+		protocol.EXPECT().WriteStructBegin("testString_args"),
+		protocol.EXPECT().WriteFieldBegin("s", thrift.TType(thrift.STRING), int16(1)),
+		protocol.EXPECT().WriteString("test"),
+		protocol.EXPECT().WriteFieldEnd(),
+		protocol.EXPECT().WriteFieldStop(),
+		protocol.EXPECT().WriteStructEnd(),
+		protocol.EXPECT().WriteMessageEnd(),
+		protocol.EXPECT().Flush(),
+		protocol.EXPECT().ReadMessageBegin().Return("unknown", thrift.REPLY, int32(1), nil),
+	)
+
+	client := errortest.NewErrorTestClient(thrift.NewTStandardClient(protocol, protocol))
+	_, err := client.TestString(defaultCtx, "test")
+	mockCtrl.Finish()
+	appErr, ok := err.(thrift.TApplicationException)
+	if !ok {
+		t.Fatal("Expected TApplicationException")
+	}
+	if appErr.TypeId() != thrift.WRONG_METHOD_NAME {
+		t.Fatal("Expected WRONG_METHOD_NAME error")
+	}
+}
+
+// TestCase: Wrong method name has been received in the client.
+// Similar to TestClientWrongMethodName, but using legacy client constructor.
+func TestClientWrongMethodNameLegacy(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	transport := thrift.NewTMemoryBuffer()
 	protocol := NewMockTProtocol(mockCtrl)
@@ -638,7 +794,7 @@ func TestClientWrongMethodName(t *testing.T) {
 	)
 
 	client := errortest.NewErrorTestClientProtocol(transport, protocol, protocol)
-	_, err := client.TestString("test")
+	_, err := client.TestString(defaultCtx, "test")
 	mockCtrl.Finish()
 	appErr, ok := err.(thrift.TApplicationException)
 	if !ok {
@@ -651,6 +807,36 @@ func TestClientWrongMethodName(t *testing.T) {
 
 // TestCase: Wrong message type has been received in the client.
 func TestClientWrongMessageType(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	protocol := NewMockTProtocol(mockCtrl)
+	gomock.InOrder(
+		protocol.EXPECT().WriteMessageBegin("testString", thrift.CALL, int32(1)),
+		protocol.EXPECT().WriteStructBegin("testString_args"),
+		protocol.EXPECT().WriteFieldBegin("s", thrift.TType(thrift.STRING), int16(1)),
+		protocol.EXPECT().WriteString("test"),
+		protocol.EXPECT().WriteFieldEnd(),
+		protocol.EXPECT().WriteFieldStop(),
+		protocol.EXPECT().WriteStructEnd(),
+		protocol.EXPECT().WriteMessageEnd(),
+		protocol.EXPECT().Flush(),
+		protocol.EXPECT().ReadMessageBegin().Return("testString", thrift.INVALID_TMESSAGE_TYPE, int32(1), nil),
+	)
+
+	client := errortest.NewErrorTestClient(thrift.NewTStandardClient(protocol, protocol))
+	_, err := client.TestString(defaultCtx, "test")
+	mockCtrl.Finish()
+	appErr, ok := err.(thrift.TApplicationException)
+	if !ok {
+		t.Fatal("Expected TApplicationException")
+	}
+	if appErr.TypeId() != thrift.INVALID_MESSAGE_TYPE_EXCEPTION {
+		t.Fatal("Expected INVALID_MESSAGE_TYPE_EXCEPTION error")
+	}
+}
+
+// TestCase: Wrong message type has been received in the client.
+// Similar to TestClientWrongMessageType, but using legacy client constructor.
+func TestClientWrongMessageTypeLegacy(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	transport := thrift.NewTMemoryBuffer()
 	protocol := NewMockTProtocol(mockCtrl)
@@ -668,7 +854,7 @@ func TestClientWrongMessageType(t *testing.T) {
 	)
 
 	client := errortest.NewErrorTestClientProtocol(transport, protocol, protocol)
-	_, err := client.TestString("test")
+	_, err := client.TestString(defaultCtx, "test")
 	mockCtrl.Finish()
 	appErr, ok := err.(thrift.TApplicationException)
 	if !ok {
